@@ -28,14 +28,20 @@ def insertData(request):
         minimumContinuousDatapoint = request.POST.get("minimumContinuousDatapoint")
         processHours = request.POST.get("processHours")
         values = request.POST.get("values")
+        startTricks=request.POST.get("startTricks")
         series={}
+        seriesValues=[]
         for i in range(int(numOfValues)):
             series["1000"+str(i+1)]=request.POST.get("1000"+str(i+1))
+            seriesValues.append(int(request.POST.get("1000"+str(i+1))))
+        seriesValuesMean=mean(seriesValues)
+        seriesValuesMedian=median(seriesValues)
+        seriesValuesMode=mode(seriesValues)
         result=cursor.find_one({"processSequenceId":processSequenceId})
         if result:
             return HttpResponse("Entered sequence id is already exist!")
         else:
-            cursor.insert_one({"processId":processId,"processSequenceId":processSequenceId,"series":series,"minimumSeries":minimumSeries,"minimumSeriesDatapoint":minimumSeriesDatapoint,"minimumContinuousDatapoint":minimumContinuousDatapoint,"processHours":processHours,"values":values})
+            cursor.insert_one({"title":"userData","processId":processId,"processSequenceId":processSequenceId,"series":series,"minimumSeries":minimumSeries,"minimumSeriesDatapoint":minimumSeriesDatapoint,"minimumContinuousDatapoint":minimumContinuousDatapoint,"processHours":processHours,"values":values,"startTricks":startTricks,"mean":seriesValuesMean,"median":seriesValuesMedian,"mode":seriesValuesMode})
             return HttpResponse("Inserted!")
     else:
         return HttpResponse("No Data Found")
@@ -77,7 +83,7 @@ def stdev(data):
 
 def processSeries10001(request):
     cursor=db.demo
-    result=cursor.find()
+    result=cursor.find({"title":"userData"})
     temp=0
     minimumValue=0
     maximumValue=0
@@ -102,11 +108,12 @@ def processSeries10001(request):
     medianValue=median(series10001)
     modeValue=mode(series10001)
     stdValue=stdev(series10001)
+    cursor.find_one_and_update({"title":"processSeries10001"},{"$set":{"minimumValue":minimumValue,"mean":meanValue,"maximumValue":maximumValue,"median":medianValue,"mode":modeValue,"standardDeviation":str("%.3f" % stdValue)}})
     return HttpResponse("Minimum Value of Series 10001: "+str(minimumValue)+"<br>Maximum Value of Series 10001: "+str(maximumValue)+"<br>Mean Value of Series 10001: "+str("%.2f" % meanValue)+"<br>Median Value of Series 10001: "+str(medianValue)+"<br>Mode Value of Series 10001: "+str(modeValue[0])+"<br>Standard Deviation of Series 10001: "+str("%.3f" % stdValue))
 
 def processAllDatapoints(request):
     cursor=db.demo
-    result=cursor.find()
+    result=cursor.find({"title":"userData"})
     dataPoints=[]
     for row in result:
         for i in row["series"]:
@@ -118,6 +125,7 @@ def processAllDatapoints(request):
     temp1 = meanValue-medianValue
     temp1 = 3*temp1
     skewness=temp1/stdValue
+    cursor.find_one_and_update({"title":"processAllDatapoints"},{"$set":{"kurtosis":kurtosisValue,"skewness":str("%.3f" %skewness)}})
     return HttpResponse("Kurtosis Value: "+str("%.3f" % kurtosisValue)+"<br>Skewness Value: "+str("%.3f" %skewness))
 
 
